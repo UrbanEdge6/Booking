@@ -12,7 +12,7 @@ st.write("Auto-generate Excel + PPT from Google Sheet & Google Maps")
 
 # Upload creds
 creds_file = st.file_uploader("Upload your Google API credentials JSON", type="json")
-sheet_url = st.text_input("Paste Google Sheet link (must be shared with credentials email)")
+sheet_url = st.text_input("https://docs.google.com/spreadsheets/d/1BAugTAqfsOaJuF66i_VRqyRyv4dBOY-U3SJ7BCsxrB4/edit?gid=1307488331#gid=1307488331 (must be shared with credentials email)")
 
 generate = st.button("🚀 Generate Campaign Files")
 
