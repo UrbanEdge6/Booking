@@ -1,0 +1,67 @@
+import streamlit as st
+import pandas as pd
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+import googlemaps
+from pptx import Presentation
+from pptx.util import Inches
+
+# UI Layout
+st.title("📍 Outdoor Campaign Generator")
+st.write("Auto-generate Excel + PPT from Google Sheet & Google Maps")
+
+# Upload creds
+creds_file = st.file_uploader("Upload your Google API credentials JSON", type="json")
+sheet_url = st.text_input("Paste Google Sheet link (must be shared with credentials email)")
+
+generate = st.button("🚀 Generate Campaign Files")
+
+if generate and creds_file and sheet_url:
+    with st.spinner("Connecting to Google..."):
+
+        # Auth with Google
+        scope = ["https://spreadsheets.google.com/feeds",'https://www.googleapis.com/auth/drive']
+        creds = ServiceAccountCredentials.from_json_keyfile_name(creds_file.name, scope)
+        client = gspread.authorize(creds)
+
+        # Open Sheet
+        sheet = client.open_by_url(sheet_url).sheet1
+        data = sheet.get_all_records()
+        df = pd.DataFrame(data)
+
+        # Add coordinates using Google Maps
+        gmaps = googlemaps.Client(key=st.secrets["GOOGLE_MAPS_API_KEY"])
+
+        def get_coords(row):
+            if not row['Latitude'] or not row['Longitude']:
+                result = gmaps.geocode(row['Location'])
+                if result:
+                    loc = result[0]['geometry']['location']
+                    return pd.Series([loc['lat'], loc['lng']])
+            return pd.Series([row['Latitude'], row['Longitude']])
+
+        df[['Latitude', 'Longitude']] = df.apply(get_coords, axis=1)
+
+    # Export Excel
+    excel_path = "campaign_data.xlsx"
+    df.to_excel(excel_path, index=False)
+
+    # Generate PPT
+    prs = Presentation()
+    slide = prs.slides.add_slide(prs.slide_layouts[0])
+    slide.shapes.title.text = "Campaign Plan"
+    slide.placeholders[1].text = "Auto-generated with AI ✨"
+
+    for _, row in df.iterrows():
+        layout = prs.slide_layouts[1]
+        slide = prs.slides.add_slide(layout)
+        slide.shapes.title.text = row['Location']
+        content = f"Format: {row['Format']}\nCost: ₹{row['Cost']}\nAvailable: {row['Availability']}\nMap: https://www.google.com/maps?q={row['Latitude']},{row['Longitude']}"
+        slide.placeholders[1].text = content
+
+    ppt_path = "campaign_ppt.pptx"
+    prs.save(ppt_path)
+
+    st.success("🎉 Done! Download your files:")
+    st.download_button("📊 Download Excel", data=open(excel_path, "rb"), file_name="campaign_data.xlsx")
+    st.download_button("📽️ Download PPT", data=open(ppt_path, "rb"), file_name="campaign_ppt.pptx")
