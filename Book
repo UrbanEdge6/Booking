@@ -65,3 +65,7 @@ if generate and creds_file and sheet_url:
     st.success("🎉 Done! Download your files:")
     st.download_button("📊 Download Excel", data=open(excel_path, "rb"), file_name="campaign_data.xlsx")
     st.download_button("📽️ Download PPT", data=open(ppt_path, "rb"), file_name="campaign_ppt.pptx")
+
+else:
+    st.warning("👆 Upload credentials and paste Google Sheet link to proceed.")
+
